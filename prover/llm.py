@@ -1,6 +1,4 @@
 from __future__ import annotations
-"""Yoanna Addition - Kari to approve"""
-from .smart_selection import clean_tactic
 
 import os
 import json
@@ -319,22 +317,9 @@ def propose_steps(
     else:
         # fallback: keep zeros except for the available facts count
         premise_tail = [0.0, 0.0, 0.0, 0.0, float(len(facts) if facts else 0.0)]
-        
-    # Yoanna added to fix apply (induction xs) to correct format apply (induct xs)   
-    cleaned_merged = []
-    seen_cleaned = set()
-
-    for tactic in merged:
-        cleaned = clean_tactic(tactic)
-        if cleaned not in seen_cleaned:
-            cleaned_merged.append(cleaned)
-            seen_cleaned.add(cleaned)
-
-    return rank_candidates(cleaned_merged, goal, state_hint, facts,
-                        reranker=reranker, depth=depth,
-                       extra_tail=premise_tail, premise_scores=premise_scores)
-    #############################################
-
+    return rank_candidates(merged, goal, state_hint, facts,
+                           reranker=reranker, depth=depth,
+                           extra_tail=premise_tail, premise_scores=premise_scores)
 
 def propose_finishers(
     models: List[str],

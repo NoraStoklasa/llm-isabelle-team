@@ -40,8 +40,33 @@ def select_premises(proof_goal, available_premises, max_premises=5):
     return index.texts_for(selected_ids)
 
 def clean_tactic(tactic):
-    return (
-        tactic
-        .replace("apply (induction ", "apply (induct ")
-        .replace("apply(induction ", "apply(induct ")
-    )
+    """
+    Clean common LLM-generated Isabelle tactic wording mistakes before ranking/testing.
+
+    This is intentionally conservative: it only fixes obvious surface-level
+    syntax issues and does not try to invent new proof strategies.
+    """
+
+    cleaned = tactic.strip()
+
+    replacements = {
+        "apply (induction ": "apply (induct ",
+        "apply(induction ": "apply(induct ",
+
+        "apply (case ": "apply (cases ",
+        "apply(case ": "apply(cases ",
+
+        "apply (simplify)": "apply simp",
+        "apply(simplify)": "apply simp",
+
+        "apply (automatic)": "apply auto",
+        "apply(automatic)": "apply auto",
+
+        "apply (blast_tac)": "apply blast",
+        "apply(blast_tac)": "apply blast",
+    }
+
+    for wrong, right in replacements.items():
+        cleaned = cleaned.replace(wrong, right)
+
+    return cleaned

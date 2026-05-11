@@ -1,4 +1,4 @@
-from prover.smart_selection import rank_tactics, select_premises, clean_tactic
+from prover.smart_selection import rank_tactics, select_premises
 
 proof_goal = "map f (xs @ ys) = map f xs @ map f ys"
 
@@ -27,9 +27,6 @@ ranked_tactics = rank_tactics(
     suggested_tactics,
     selected_premises
 )
-
-print("Clean tactic test:")
-print(clean_tactic("apply (induction xs)"))
 
 print("\nSelected premises:")
 for premise in selected_premises:

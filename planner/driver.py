@@ -68,12 +68,25 @@ def _fill_one_hole(isabelle, session: str, full_text: str, hole_span: Tuple[int,
     
     # orig_goal = _original_goal_from_state(state_block)
     eff_goal = _effective_goal_from_state(state_block, goal_text, full_text, hole_span, trace)
-    
+
     # if trace:
     #     # if orig_goal:
     #     #     print(f"[fill] Original goal: {orig_goal}")
     #     print(f"[fill] Effective goal: {eff_goal}")
-    
+
+    # Fix A: try standard tactics directly in the full proof before calling prove_goal.
+    # Each _verify_full_proof costs ~2-4s; prove_goal+sledgehammer costs 12-35s and can
+    # exhaust per_hole_budget before its finisher loop gets to run.
+    _qf_s, _qf_e = hole_span
+    _qf_line_start = full_text.rfind("\n", 0, _qf_s) + 1
+    _qf_indent = " " * (_qf_s - _qf_line_start)
+    for _qf in ("by auto", "by simp", "by blast", "by fastforce", "by force"):
+        _qf_text = full_text[:_qf_line_start] + _qf_indent + _qf + full_text[_qf_e:]
+        if _verify_full_proof(isabelle, session, _qf_text):
+            if trace:
+                print(f"[fill] Quick finisher succeeded: {_qf!r}")
+            return _qf_text, True, _qf
+
     res = prove_goal(
         isabelle, session, eff_goal, model_name_or_ensemble=model,
         beam_w=3, max_depth=6, hint_lemmas=6, timeout=per_hole_timeout,
@@ -117,13 +130,15 @@ def _fill_one_hole(isabelle, session: str, full_text: str, hole_span: Tuple[int,
     if not (applies or fin):
         return full_text, False, "no-steps"
     
-    # Handle finisher
+    # Handle finisher (Fix B: use the sorry's own line indentation, not hardcoded 2 spaces)
     if fin:
         script_lines = applies + [fin]
-        insert = "\n  " + "\n  ".join(script_lines) + "\n"
         s, e = hole_span
-        new_text = full_text[:s] + insert + full_text[e:]
-        
+        _b_line_start = full_text.rfind("\n", 0, s) + 1
+        _b_indent = " " * (s - _b_line_start)
+        insert = _b_indent + ("\n" + _b_indent).join(script_lines)
+        new_text = full_text[:_b_line_start] + insert + full_text[e:]
+
         if _verify_full_proof(isabelle, session, new_text):
             return new_text, True, "\n".join(script_lines)
         return full_text, False, "finisher-unverified"
@@ -520,7 +535,9 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
 
         focused_hole_key: Optional[str] = None
 
-        while "sorry" in full and left_s() > 0:
+        while "sorry" in full and left_s() > 1.0:
+            if left_s() < 1.0:  # belt-and-suspenders: stop float-precision spin
+                break
             spans = find_sorry_spans(full)
             if not spans:
                 break
@@ -595,7 +612,7 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
 
             # Try CEGIS repairs
             current_stage = repair_progress.get(hole_key, 0)
-            if current_stage > 0 and repairs and left_s() > 6:
+            if current_stage > 0 and repairs and left_s() > 20:  # Fix C: was > 6; LLM+verify needs ~20s
                 try:
                     state = _print_state_before_hole(isa, session, full, span, trace)
                     eff_goal = _effective_goal_from_state(state, goal_text, full, span, trace)
@@ -623,6 +640,9 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
                         print(f"[repair] try_cegis_repairs crashed: {type(ex).__name__}: {ex}")
                     patched, applied = full, False
 
+                STAGE1_CAP = 2
+                STAGE2_CAP = 3
+
                 if patched != full:
                     try:
                         if _verify_full_proof(isa, session, patched):
@@ -639,9 +659,6 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
                     # Unverified change: count attempt and decide escalation
                     key = (hole_key, start_stage)
                     stage_tries[key] = stage_tries.get(key, 0) + 1
-
-                    STAGE1_CAP = 2
-                    STAGE2_CAP = 3
 
                     should_escalate = False
                     if start_stage == 1 and stage_tries[key] >= STAGE1_CAP:
@@ -721,8 +738,50 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
                     repair_progress[hole_key] = min(start_stage + 1, 2)
                     focused_hole_key = hole_key
                 else:
-                    repair_progress[hole_key] = 2
-                    focused_hole_key = hole_key
+                    # Stage 2 made no progress — check cap and trigger whole-proof regen
+                    if stage_tries.get((hole_key, 2), 0) >= STAGE2_CAP:
+                        if trace:
+                            print(f"[repair] Stage 2 cap ({STAGE2_CAP}) reached (no-change path). Regenerating whole proof...")
+                        regen_budget = min(40.0, max(8.0, left_s() * 0.8))
+                        try:
+                            new_full, ok_re, _ = regenerate_whole_proof(
+                                full_text=full, goal_text=goal_text, model=model,
+                                isabelle=isa, session=session, budget_s=regen_budget,
+                                trace=trace, prior_outline_text=full
+                            )
+                        except (TimeoutError, _FuturesTimeout, ValueError) as ex:
+                            _restart_isabelle("regenerate_whole_proof", ex)
+                            new_full, ok_re = full, False
+                        except Exception as ex:
+                            if trace:
+                                print(f"[repair] regenerate_whole_proof crashed: {type(ex).__name__}: {ex}")
+                            new_full, ok_re = full, False
+
+                        if ok_re and new_full != full:
+                            full = new_full
+                            repair_progress.clear()
+                            stage_tries.clear()
+                            focused_hole_key = None
+                            continue
+
+                        if trace:
+                            print("[repair] Whole regeneration failed to verify; proposing a fresh outline…")
+                        temps = tuple(outline_temps) if outline_temps else (0.35, 0.55, 0.85)
+                        k = int(outline_k) if outline_k is not None else 3
+                        best, _ = propose_isar_skeleton_diverse_best(
+                            goal_text, isabelle=isa, session_id=session, model=model, temps=temps, k=k,
+                            force_outline=True, priors_path=priors_path, context_hints=context_hints,
+                            lib_templates=lib_templates, alpha=alpha, beta=beta, gamma=gamma,
+                            hintlex_path=hintlex_path, hintlex_top=hintlex_top,
+                        )
+                        full = best.text
+                        repair_progress.clear()
+                        stage_tries.clear()
+                        focused_hole_key = None
+                        continue
+                    else:
+                        repair_progress[hole_key] = 2
+                        focused_hole_key = hole_key
 
         # Final verification
         success = ("sorry" not in full)

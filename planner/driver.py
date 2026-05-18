@@ -722,6 +722,8 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
                     if opened:
                         full = full2
                         focused_hole_key = None
+                        if trace:
+                            print("[repair] Opened new sorry after partial repair; re-running Fill on new hole...")
                         continue
                     else:
                         if trace:

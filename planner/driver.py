@@ -532,6 +532,8 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
         repair_progress: dict[str, int] = {}
         stage_tries: dict[Tuple[str, int], int] = {}
         _skip_fill_logged_once: set[Tuple[str, int]] = set()
+        total_repair_ops: int = 0                          # #36: global repair budget counter
+        MAX_TOTAL_REPAIR_OPS: int = max_repairs_per_hole * 5  # e.g. 2*5=10 total repair calls
 
         focused_hole_key: Optional[str] = None
 
@@ -610,9 +612,16 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
                     print(f"[fill] Skipping fill for hole @{hole_key}; running repairs at stage {start_stage}")
                     _skip_fill_logged_once.add((hole_key, start_stage))
 
-            # Try CEGIS repairs
+            # Try CEGIS repairs (#36: gated on both time budget and global op counter)
             current_stage = repair_progress.get(hole_key, 0)
-            if current_stage > 0 and repairs and left_s() > 20:  # Fix C: was > 6; LLM+verify needs ~20s
+            if current_stage > 0 and repairs and left_s() > 20:
+                if total_repair_ops >= MAX_TOTAL_REPAIR_OPS:
+                    if trace:
+                        print(f"[repair] Global repair budget exhausted ({MAX_TOTAL_REPAIR_OPS} ops). Stopping.")
+                    break
+                total_repair_ops += 1
+                if trace:
+                    print(f"[repair] Repair op {total_repair_ops}/{MAX_TOTAL_REPAIR_OPS} (stage {current_stage}, left={left_s():.0f}s)")
                 try:
                     state = _print_state_before_hole(isa, session, full, span, trace)
                     eff_goal = _effective_goal_from_state(state, goal_text, full, span, trace)

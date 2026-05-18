@@ -143,8 +143,24 @@ def _fill_one_hole(isabelle, session: str, full_text: str, hole_span: Tuple[int,
             return new_text, True, "\n".join(script_lines)
         return full_text, False, "finisher-unverified"
     
-    # Handle apply-only  (NEVER mark success for apply-only scripts)
+    # Handle apply-only
     if applies:
+        # #37: Candidate pool — try applies + each standard finisher before falling back
+        # to partial-progress insertion. Prefer the furthest-reaching combination
+        # (first one that fully closes the goal).
+        _cp_s, _cp_e = hole_span
+        _cp_line_start = full_text.rfind("\n", 0, _cp_s) + 1
+        _cp_indent = " " * (_cp_s - _cp_line_start)
+        for _std_fin in ("by auto", "by simp", "by blast", "by fastforce", "by force"):
+            _cp_script = applies + [_std_fin]
+            _cp_insert = _cp_indent + ("\n" + _cp_indent).join(_cp_script)
+            _cp_text = full_text[:_cp_line_start] + _cp_insert + full_text[_cp_e:]
+            if _verify_full_proof(isabelle, session, _cp_text):
+                if trace:
+                    print(f"[fill] Candidate pool: applies+{_std_fin!r} closed the goal")
+                return _cp_text, True, "\n".join(_cp_script)
+
+        # Candidate pool exhausted — fall through to partial-progress logic
         # Decide if the hole sits under a have/show/obtain head; if so, we must NOT
         # leave a bare 'apply' there (illegal in 'prove' mode). Replace the hole with
         # a tiny subproof instead of inserting above the hole.
@@ -532,6 +548,8 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
         repair_progress: dict[str, int] = {}
         stage_tries: dict[Tuple[str, int], int] = {}
         _skip_fill_logged_once: set[Tuple[str, int]] = set()
+        total_repair_ops: int = 0                          # #36: global repair budget counter
+        MAX_TOTAL_REPAIR_OPS: int = max_repairs_per_hole * 5  # e.g. 2*5=10 total repair calls
 
         focused_hole_key: Optional[str] = None
 
@@ -610,9 +628,16 @@ def plan_and_fill(goal: str, model: Optional[str] = None, timeout: int = 100, *,
                     print(f"[fill] Skipping fill for hole @{hole_key}; running repairs at stage {start_stage}")
                     _skip_fill_logged_once.add((hole_key, start_stage))
 
-            # Try CEGIS repairs
+            # Try CEGIS repairs (#36: gated on both time budget and global op counter)
             current_stage = repair_progress.get(hole_key, 0)
-            if current_stage > 0 and repairs and left_s() > 20:  # Fix C: was > 6; LLM+verify needs ~20s
+            if current_stage > 0 and repairs and left_s() > 20:
+                if total_repair_ops >= MAX_TOTAL_REPAIR_OPS:
+                    if trace:
+                        print(f"[repair] Global repair budget exhausted ({MAX_TOTAL_REPAIR_OPS} ops). Stopping.")
+                    break
+                total_repair_ops += 1
+                if trace:
+                    print(f"[repair] Repair op {total_repair_ops}/{MAX_TOTAL_REPAIR_OPS} (stage {current_stage}, left={left_s():.0f}s)")
                 try:
                     state = _print_state_before_hole(isa, session, full, span, trace)
                     eff_goal = _effective_goal_from_state(state, goal_text, full, span, trace)

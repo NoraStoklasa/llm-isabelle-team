@@ -143,8 +143,24 @@ def _fill_one_hole(isabelle, session: str, full_text: str, hole_span: Tuple[int,
             return new_text, True, "\n".join(script_lines)
         return full_text, False, "finisher-unverified"
     
-    # Handle apply-only  (NEVER mark success for apply-only scripts)
+    # Handle apply-only
     if applies:
+        # #37: Candidate pool — try applies + each standard finisher before falling back
+        # to partial-progress insertion. Prefer the furthest-reaching combination
+        # (first one that fully closes the goal).
+        _cp_s, _cp_e = hole_span
+        _cp_line_start = full_text.rfind("\n", 0, _cp_s) + 1
+        _cp_indent = " " * (_cp_s - _cp_line_start)
+        for _std_fin in ("by auto", "by simp", "by blast", "by fastforce", "by force"):
+            _cp_script = applies + [_std_fin]
+            _cp_insert = _cp_indent + ("\n" + _cp_indent).join(_cp_script)
+            _cp_text = full_text[:_cp_line_start] + _cp_insert + full_text[_cp_e:]
+            if _verify_full_proof(isabelle, session, _cp_text):
+                if trace:
+                    print(f"[fill] Candidate pool: applies+{_std_fin!r} closed the goal")
+                return _cp_text, True, "\n".join(_cp_script)
+
+        # Candidate pool exhausted — fall through to partial-progress logic
         # Decide if the hole sits under a have/show/obtain head; if so, we must NOT
         # leave a bare 'apply' there (illegal in 'prove' mode). Replace the hole with
         # a tiny subproof instead of inserting above the hole.

@@ -1,0 +1,28 @@
+# Large raw datasets — downloaded separately, not version-controlled
+# Full MagnusData dump is several GB; only the small sample is committed
+datasets/magnusdata/full_dataset.json
+datasets/magnusdata/*.parquet
+
+# MagnusData conversion output logs — regenerated from the sample
+logs/attempts.magnus.jsonl
+logs/magnus_shards/
+
+# AFP source tree — too large for git, download manually from isa-afp.org
+# See SETUP_AFP.md for instructions
+afp-*/
+external/afp*/
+
+# General large log files produced at runtime
+logs/*.jsonl
+logs/*.log
+
+# Python virtual environment
+.venv/
+
+# Python bytecode caches
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS metadata
+.DS_Store

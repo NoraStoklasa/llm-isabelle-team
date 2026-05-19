@@ -48,9 +48,10 @@ Key features:
   - [3.6 Planner data corpus and micro RAG](#36-planner-data-corpus-and-micro-rag)
   - [3.7 Isabelle/jEdit GUI integration](#37-isabellejedit-gui-integration)
   - [3.8 Evaluation using mini-F2F](#38-evaluation-using-mini-f2f)
-- [4. Project Structure](#5-project-structure)
-- [5. Notes & Tips](#6-notes--tips)
-- [6. License](#7-license)
+- [4. Datasets used in this fork](#4-datasets-used-in-this-fork)
+- [5. Project Structure](#5-project-structure)
+- [6. Notes & Tips](#6-notes--tips)
+- [7. License](#7-license)
 
 ---
 
@@ -628,7 +629,19 @@ python -m planner.experiments bench \
 
 ---
 
-## 4. Project Structure
+## 4. Datasets used in this fork
+
+This fork evaluates the prover and planner against three benchmark datasets. miniF2F and PutnamBench are already committed; the MagnusData sample must be downloaded separately via the streaming script.
+
+| # | Dataset | Source | In repo? | How to obtain |
+|---|---------|---------|----------|---------------|
+| 1 | miniF2F | facebookresearch/miniF2F | Yes | Already in `datasets/mini_f2f/` |
+| 2 | PutnamBench | trishullab/PutnamBench | Yes | Already in `datasets/putnambench/` |
+| 3 | MagnusData (sample) | Simontwice (HF) | Sample only | `python datasets/get_magnus_sample.py` |
+
+---
+
+## 5. Project Structure
 ```
 datasets/          # Datasets and results
 isabelle_ui/       # Isabelle/jEdit integration (HTTP server + macros)
@@ -639,7 +652,7 @@ prover/            # Step prover (supports Ollama, Gemini CLI, HF) + reranker
 
 ---
 
-## 5. Notes & Tips
+## 6. Notes & Tips
 - Isabelle server is started once and reused; scripts manage lifecycle.
 - Proof minimization is on by default; disable with `--no-minimize` when debugging.
 - Ensembles (`--models`) improve robustness but cost more RAM/time.
@@ -648,5 +661,5 @@ prover/            # Step prover (supports Ollama, Gemini CLI, HF) + reranker
 
 ---
 
-## 6. License
+## 7. License
 MIT License.

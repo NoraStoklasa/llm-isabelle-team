@@ -442,16 +442,22 @@ def prove_goal(isabelle, session_id: str, goal: str, model_name_or_ensemble: str
                 pruned = False
                 if use_qc and _should_boolean_precheck and depth % max(1, qc_every) == 0:
                     try:
-                        if precheck_quickcheck_refutes(isabelle, session_id, steps + [c], timeout_s=qc_timeout):
+                        qc_refuted = precheck_quickcheck_refutes(isabelle, session_id, steps + [c], timeout_s=qc_timeout)
+                        if qc_refuted:
                             pruned = True
                             if trace: print(color(use_color, "dim", f"  step  ·  [{origin}] {c}  [pruned by quickcheck]"))
+                        elif trace:
+                            print(color(use_color, "dim", f"  quickcheck checked [{origin}] {c}  [no refutation reported]"))
                     except Exception as e:
                         if trace: print(color(use_color, "yellow", f"  quickcheck error ignored: {e}"))
                 if not pruned and use_np and _should_boolean_precheck and depth % max(1, np_every) == 0:
                     try:
-                        if precheck_nitpick_refutes(isabelle, session_id, steps + [c], timeout_s=np_timeout):
+                        np_refuted = precheck_nitpick_refutes(isabelle, session_id, steps + [c], timeout_s=np_timeout)
+                        if np_refuted:
                             pruned = True
                             if trace: print(color(use_color, "dim", f"  step  ·  [{origin}] {c}  [pruned by nitpick]"))
+                        elif trace:
+                            print(color(use_color, "dim", f"  nitpick checked [{origin}] {c}  [no refutation reported]"))
                     except Exception as e:
                         if trace: print(color(use_color, "yellow", f"  nitpick error ignored: {e}"))
                 if pruned:
@@ -550,6 +556,13 @@ def prove_goal(isabelle, session_id: str, goal: str, model_name_or_ensemble: str
             seen_fp.add(fp)
             next_beam.append((n_sub if n_sub is not None else 9999, steps, hint or "", n_sub))
         beam = next_beam
+
+        if trace:
+            summary = ", ".join(
+                f"state{i+1}: subgoals={n_sub if n_sub is not None else '?'} steps={len(steps)}"
+                for i, (score, steps, _hint, n_sub) in enumerate(beam)
+            )
+            print(color(use_color, "gray", f"Beam kept {len(beam)}/{beam_w} after depth {depth_reached}: {summary}"))
 
     # Ran out of depth; return best partial
     best = min(beam, key=lambda t: (t[0], len("\n".join(t[1]))))

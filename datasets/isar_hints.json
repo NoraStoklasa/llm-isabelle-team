@@ -1,0 +1,62 @@
+{
+  "n": [
+    [
+      "induction n",
+      4
+    ]
+  ],
+  "nat": [
+    [
+      "induction n",
+      3
+    ]
+  ],
+  "m": [
+    [
+      "induction n",
+      2
+    ]
+  ],
+  "rev": [
+    [
+      "induction xs",
+      3
+    ]
+  ],
+  "xs": [
+    [
+      "induction xs",
+      8
+    ]
+  ],
+  "map": [
+    [
+      "induction xs",
+      2
+    ]
+  ],
+  "f": [
+    [
+      "induction xs",
+      2
+    ]
+  ],
+  "ys": [
+    [
+      "induction xs",
+      4
+    ]
+  ],
+  "@": [
+    [
+      "induction xs",
+      5
+    ]
+  ],
+  "length": [
+    [
+      "induction xs",
+      2
+    ]
+  ]
+}

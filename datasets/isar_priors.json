@@ -1,0 +1,237 @@
+{
+  "rules": [
+    {
+      "if_any_tokens": [
+        "not"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "cases"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "P"
+      ],
+      "prefer_patterns": [
+        "cases",
+        "plain"
+      ],
+      "weight": 0.375
+    },
+    {
+      "if_any_tokens": [
+        "and"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "cases"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "Q"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "cases"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "or"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "cases"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "x"
+      ],
+      "prefer_patterns": [
+        "cases",
+        "plain"
+      ],
+      "weight": 0.375
+    },
+    {
+      "if_any_tokens": [
+        "a"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "cases"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "y"
+      ],
+      "prefer_patterns": [
+        "cases",
+        "plain"
+      ],
+      "weight": 0.375
+    },
+    {
+      "if_any_tokens": [
+        "b"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "cases"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "if"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "cases"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "then"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "cases"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "else"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "cases"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "n"
+      ],
+      "prefer_patterns": [
+        "induction",
+        "plain"
+      ],
+      "weight": 0.386
+    },
+    {
+      "if_any_tokens": [
+        "nat"
+      ],
+      "prefer_patterns": [
+        "induction",
+        "plain"
+      ],
+      "weight": 0.412
+    },
+    {
+      "if_any_tokens": [
+        "Suc"
+      ],
+      "prefer_patterns": [
+        "plain",
+        "induction"
+      ],
+      "weight": 0.412
+    },
+    {
+      "if_any_tokens": [
+        "m"
+      ],
+      "prefer_patterns": [
+        "induction",
+        "plain"
+      ],
+      "weight": 0.375
+    },
+    {
+      "if_any_tokens": [
+        "le"
+      ],
+      "prefer_patterns": [
+        "plain"
+      ],
+      "weight": 0.45
+    },
+    {
+      "if_any_tokens": [
+        "f"
+      ],
+      "prefer_patterns": [
+        "induction",
+        "plain"
+      ],
+      "weight": 0.4
+    },
+    {
+      "if_any_tokens": [
+        "rev"
+      ],
+      "prefer_patterns": [
+        "induction"
+      ],
+      "weight": 0.45
+    },
+    {
+      "if_any_tokens": [
+        "xs"
+      ],
+      "prefer_patterns": [
+        "induction"
+      ],
+      "weight": 0.45
+    },
+    {
+      "if_any_tokens": [
+        "map"
+      ],
+      "prefer_patterns": [
+        "induction"
+      ],
+      "weight": 0.45
+    },
+    {
+      "if_any_tokens": [
+        "ys"
+      ],
+      "prefer_patterns": [
+        "induction"
+      ],
+      "weight": 0.45
+    },
+    {
+      "if_any_tokens": [
+        "@"
+      ],
+      "prefer_patterns": [
+        "induction"
+      ],
+      "weight": 0.45
+    },
+    {
+      "if_any_tokens": [
+        "length"
+      ],
+      "prefer_patterns": [
+        "induction"
+      ],
+      "weight": 0.45
+    }
+  ]
+}

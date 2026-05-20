@@ -204,6 +204,7 @@ def mine_afp_corpus_rich(src_dir: str, out_jsonl: str) -> None:
                 rec: Dict[str, Any] = {
                     "goal": stmt,
                     "outline": outline,
+                    "proof_block": block,  #FIX: actual real proof
                     "theory": hdr.get("theory"),
                     "imports": hdr.get("imports", []),
                     "premises": _premises_from_goal(stmt),

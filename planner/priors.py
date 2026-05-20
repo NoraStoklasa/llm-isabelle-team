@@ -70,7 +70,9 @@ def aggregate(in_jsonl: str,
             except Exception:
                 continue
             goal = rec.get("goal") or ""
-            outline = rec.get("outline") or ""
+            #outline = rec.get("outline") or ""
+            #now reads the real proof first
+            outline = rec.get("proof_block") or rec.get("outline") or ""
             defs_in_block = rec.get("defs_in_block") or []
             if not goal or not outline:  # keep robust
                 continue
